@@ -25,6 +25,22 @@ typedef struct metadata {
 
 static metadata_t* freelist = NULL;
 
+metadata_t* split(metadata_t* curr, size_t numbytes){
+    metadata_t* ret = curr + sizeof(metadata_t);
+    if (curr->size == numbytes){
+        curr->prev->next = curr->next;
+        curr->next->prev = curr->prev;
+    }
+    else {
+        size_t request_size = (size_t) numbytes + sizeof(metadata_t);
+        curr += request_size;
+        curr->prev->next = curr;
+        curr->next->prev = curr;
+        curr->size = curr->size - request_size;
+    }
+    return ret;
+}
+
 void* dmalloc(size_t numbytes) {
   /* initialize through sbrk call first time */
   if(freelist == NULL) { 			
@@ -34,10 +50,22 @@ void* dmalloc(size_t numbytes) {
 
   assert(numbytes > 0);
 
-  /* your code here */
-	
-  return NULL;
+    metadata_t* curr = freelist;
+    metadata_t* ret;
+    while(curr->next != NULL){
+        if (curr->size >= numbytes) {
+            ret = split(curr, numbytes);
+            break;
+        }	
+        curr = curr->next;
+    }
+  return ret;
 }
+
+
+
+
+
 
 void dfree(void* ptr) {
   /* your code here */
