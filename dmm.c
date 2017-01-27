@@ -25,14 +25,15 @@ typedef struct metadata {
 
 static metadata_t* freelist = NULL;
 
-metadata_t* split(metadata_t* curr, size_t numbytes){
-    metadata_t* ret = curr + sizeof(metadata_t);
+void* split(metadata_t* curr, size_t numbytes){
+    void* ret = (void*)sizeof(metadata_t) + (void*)curr;
+    /*metadata_t* ret = sizeof(metadata_t) + curr;*/
     if (curr->size == numbytes){
         curr->prev->next = curr->next;
         curr->next->prev = curr->prev;
     }
     else {
-        size_t request_size = (size_t) numbytes + sizeof(metadata_t);
+        size_t request_size = sizeof(metadata_t) + numbytes;
         curr += request_size;
         curr->prev->next = curr;
         curr->next->prev = curr;
@@ -48,6 +49,7 @@ void* dmalloc(size_t numbytes) {
             return NULL;
     }
     assert(numbytes > 0);
+    numbytes = ALIGN(numbytes);
     metadata_t* curr = freelist;
     metadata_t* ret;
     while(curr->next != NULL){
