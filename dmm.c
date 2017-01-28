@@ -32,7 +32,11 @@ metadata_t* split(metadata_t* curr, size_t numbytes){
         curr->next->prev = curr->prev;
     }
     else {
-        size_t request_size = (size_t) n- request_size;
+        size_t request_size = (size_t) numbytes + sizeof(metadata_t);
+        curr += request_size;
+        curr->prev->next = curr;
+        curr->next->prev = curr;
+        curr->size = curr->size - request_size;
     }
     return ret;
 }
@@ -43,13 +47,7 @@ void* dmalloc(size_t numbytes) {
     if(!dmalloc_init())
       return NULL;
   }
-
-  assert(numbytes > 0);umbytes + sizeof(metadata_t);
-        curr += request_size;
-        curr->prev->next = curr;
-        curr->next->prev = curr;
-        curr->size = curr->size 
-
+  assert(numbytes > 0);
     metadata_t* curr = freelist;
     metadata_t* ret;
     while(curr->next != NULL){
