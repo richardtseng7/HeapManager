@@ -62,13 +62,46 @@ void* dmalloc(size_t numbytes) {
   return ret;
 }
 
-
-
-
-
+void* coalesce() {
+    metadata_t *curr = freelist;
+    while(curr->next != NULL){
+        if ((curr + curr->size) == curr->next){
+            curr->size += curr->next->size;
+            curr->next = curr->next->next;
+            curr->next->prev = curr;
+        }
+        else {
+        curr = curr->next;
+        }
+    }
+}
 
 void dfree(void* ptr) {
   /* your code here */
+  /* sort freelist with respect to addresses so that you can coalesce in one pass of list */
+	/* coalesce adjacent free blocks into one */
+	/* coalesce - add the space of second block and its metadata to space in first block */
+    
+    metadata_t *curr = freelist;
+    while(true){
+        if (curr > ptr){
+            ptr->prev = curr->prev;
+            ptr->next = curr;
+            curr->prev->next = ptr;
+            curr->prev = ptr;
+            break;
+        }
+        if(curr->next == NULL){
+            curr->next = ptr;
+            ptr->prev = curr;
+            ptr->next = NULL;
+            break;
+        }
+        curr = curr->next;
+    }
+    coalesce();
+    
+    
 }
 
 bool dmalloc_init() {
