@@ -28,15 +28,22 @@ static metadata_t* freelist = NULL;
 void* split(metadata_t* curr, size_t numbytes){
     void* ret = (void*)curr + sizeof(metadata_t);
     /*metadata_t* ret = sizeof(metadata_t) + curr;*/
+
     /* if free block is exactly the same size the user wants */
     if (curr->size == (sizeof(metadata_t) + numbytes)){
-        if(curr->prev != NULL){
+        if(curr->prev != NULL){ /* freelist contains more than one block */
             curr->prev->next = curr->next;
+        }
+        else if(curr->prev == NULL){
+            freelist = curr->next;
         }
         if(curr->next != NULL){
             curr->next->prev = curr->prev;
         }
+
     }
+
+    /* free block is bigger than what is needed, split */
     else {
         void* rem_add = (void*)curr + sizeof(metadata_t) + numbytes;
         metadata_t *rem = (metadata_t*)rem_add;
@@ -46,15 +53,16 @@ void* split(metadata_t* curr, size_t numbytes){
         if(curr->prev != NULL){
             curr->prev->next = rem;
         }
+        else if(curr->prev == NULL){
+            freelist = rem;
+        }
         if(curr->next != NULL){
             curr->next->prev = rem;
         }
-        curr->size = sizeof(metadata_t) + numbytes; /* requested size needed */
+        curr->size = sizeof(metadata_t) + numbytes; /* requested size */
     }
     curr->prev = NULL;
     curr->next = NULL;
-
-
     return ret;
 }
 
