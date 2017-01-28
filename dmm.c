@@ -111,19 +111,28 @@ void dfree(void* ptr) {
     /* coalesce - add the space of second block and its metadata to space in first block */
     
     metadata_t *curr = freelist;
-    metadata_t *ptr2 = ptr;
+    void* header_address = ptr - sizeof(metadata_t);
+    metadata_t *header = (metadata_t*) header_address; 
+
+    /* iterate through freelist to place newly free block in sorted order */
     while(true){
-        if (curr > ptr2){
-            ptr2->prev = curr->prev;
-            ptr2->next = curr;
-            curr->prev->next = ptr2;
-            curr->prev = ptr2;
+        if (curr > header){ /* adding newly free block in ascending address order, when you find one with a larger address */
+            if(curr->prev != NULL){ /* case in which you are in the middle of the freelist */
+                curr->prev->next = header;
+            }
+            else if(curr->prev == NULL){ /* case in which newly added free block has the smallest address (is first) in freelist */
+                freelist = header; /* set new block as head of freelist */
+            }
+            /* reaaranging pointers */
+            header->prev = curr->prev;
+            header->next = curr;
+            curr->prev = header;
             break;
         }
         if(curr->next == NULL){
-            curr->next = ptr2;
-            ptr2->prev = curr;
-            ptr2->next = NULL;
+            curr->next = header;
+            header->prev = curr;
+            header->next = NULL;
             break;
         }
         curr = curr->next;
