@@ -28,16 +28,24 @@ static metadata_t* freelist = NULL;
 void* split(metadata_t* curr, size_t numbytes){
     void* ret = (void*)sizeof(metadata_t) + (void*)curr;
     /*metadata_t* ret = sizeof(metadata_t) + curr;*/
-    if (curr->size == numbytes){
+    /* if free block is exactly the same size the user wants */
+    if (curr->size == (sizeof(metadata_t) + numbytes)){
         curr->prev->next = curr->next;
         curr->next->prev = curr->prev;
+        curr->prev = NULL;
+        curr0>next = NULL;
     }
     else {
-        size_t request_size = sizeof(metadata_t) + numbytes;
-        curr += request_size;
-        curr->prev->next = curr;
-        curr->next->prev = curr;
-        curr->size = curr->size - request_size;
+        void* rem_add = (void *)curr + (void *)sizeof(metadata_t) + (void *)numbytes;
+        metadata_t *rem = (metadata_t *)rem_add;
+        rem->size = curr->size - sizeof(metadata_t) - numbytes; /* subtract header and rest of uneeded free block */
+        rem->prev = curr->prev;
+        rem->next = curr->next;
+        curr->prev->next = rem;
+        curr->next->prev = rem;
+        curr->size = sizeof(metadata_t) + numbytes; /* requested size needed */
+        curr->prev = NULL;
+        curr->next = NULL;
     }
     return ret;
 }
@@ -51,7 +59,7 @@ void* dmalloc(size_t numbytes) {
     assert(numbytes > 0);
     numbytes = ALIGN(numbytes);
     metadata_t* curr = freelist;
-    metadata_t* ret;
+    void* ret;
     while(curr->next != NULL){
         if (curr->size >= numbytes) {
             ret = split(curr, numbytes);
