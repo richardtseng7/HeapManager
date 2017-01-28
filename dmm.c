@@ -32,11 +32,7 @@ metadata_t* split(metadata_t* curr, size_t numbytes){
         curr->next->prev = curr->prev;
     }
     else {
-        size_t request_size = (size_t) numbytes + sizeof(metadata_t);
-        curr += request_size;
-        curr->prev->next = curr;
-        curr->next->prev = curr;
-        curr->size = curr->size - request_size;
+        size_t request_size = (size_t) n- request_size;
     }
     return ret;
 }
@@ -48,7 +44,11 @@ void* dmalloc(size_t numbytes) {
       return NULL;
   }
 
-  assert(numbytes > 0);
+  assert(numbytes > 0);umbytes + sizeof(metadata_t);
+        curr += request_size;
+        curr->prev->next = curr;
+        curr->next->prev = curr;
+        curr->size = curr->size 
 
     metadata_t* curr = freelist;
     metadata_t* ret;
@@ -62,7 +62,7 @@ void* dmalloc(size_t numbytes) {
   return ret;
 }
 
-void* coalesce() {
+void coalesce() {
     metadata_t *curr = freelist;
     while(curr->next != NULL){
         if ((curr + curr->size) == curr->next){
@@ -83,18 +83,19 @@ void dfree(void* ptr) {
 	/* coalesce - add the space of second block and its metadata to space in first block */
     
     metadata_t *curr = freelist;
+    metadata_t *ptr2 = ptr;
     while(true){
-        if (curr > ptr){
-            ptr->prev = curr->prev;
-            ptr->next = curr;
-            curr->prev->next = ptr;
-            curr->prev = ptr;
+        if (curr > ptr2){
+            ptr2->prev = curr->prev;
+            ptr2->next = curr;
+            curr->prev->next = ptr2;
+            curr->prev = ptr2;
             break;
         }
         if(curr->next == NULL){
-            curr->next = ptr;
-            ptr->prev = curr;
-            ptr->next = NULL;
+            curr->next = ptr2;
+            ptr2->prev = curr;
+            ptr2->next = NULL;
             break;
         }
         curr = curr->next;
