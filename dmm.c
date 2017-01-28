@@ -26,27 +26,35 @@ typedef struct metadata {
 static metadata_t* freelist = NULL;
 
 void* split(metadata_t* curr, size_t numbytes){
-    void* ret = (void*)sizeof(metadata_t) + (void*)curr;
+    void* ret = (void*)curr + sizeof(metadata_t);
     /*metadata_t* ret = sizeof(metadata_t) + curr;*/
     /* if free block is exactly the same size the user wants */
     if (curr->size == (sizeof(metadata_t) + numbytes)){
-        curr->prev->next = curr->next;
-        curr->next->prev = curr->prev;
-        curr->prev = NULL;
-        curr0>next = NULL;
+        if(curr->prev != NULL){
+            curr->prev->next = curr->next;
+        }
+        if(curr->next != NULL){
+            curr->next->prev = curr->prev;
+        }
     }
     else {
-        void* rem_add = (void *)curr + (void *)sizeof(metadata_t) + (void *)numbytes;
-        metadata_t *rem = (metadata_t *)rem_add;
+        void* rem_add = (void*)curr + sizeof(metadata_t) + numbytes;
+        metadata_t *rem = (metadata_t*)rem_add;
         rem->size = curr->size - sizeof(metadata_t) - numbytes; /* subtract header and rest of uneeded free block */
         rem->prev = curr->prev;
         rem->next = curr->next;
-        curr->prev->next = rem;
-        curr->next->prev = rem;
+        if(curr->prev != NULL){
+            curr->prev->next = rem;
+        }
+        if(curr->next != NULL){
+            curr->next->prev = rem;
+        }
         curr->size = sizeof(metadata_t) + numbytes; /* requested size needed */
-        curr->prev = NULL;
-        curr->next = NULL;
     }
+    curr->prev = NULL;
+    curr->next = NULL;
+
+
     return ret;
 }
 
@@ -59,13 +67,17 @@ void* dmalloc(size_t numbytes) {
     assert(numbytes > 0);
     numbytes = ALIGN(numbytes);
     metadata_t* curr = freelist;
-    void* ret;
-    while(curr->next != NULL){
-        if (curr->size >= numbytes) {
+    void* ret = NULL;
+    while(true){
+        if (curr->size >= numbytes) { /* compare requested size to available free block */
             ret = split(curr, numbytes);
             break;
         }
-        curr = curr->next;
+        if (curr->next == NULL){ /* there are no free blocks */
+            assert(Error);
+            break;
+        }
+        curr = curr->next; /* iterate to next free block */
     }
     return ret;
 }
