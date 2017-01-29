@@ -28,7 +28,6 @@ static metadata_t* freelist = NULL;
 void* split(metadata_t* curr, size_t numbytes){
     void* ret = (void*)curr + sizeof(metadata_t);
     /*metadata_t* ret = sizeof(metadata_t) + curr;*/
-
     /* if free block is exactly the same size the user wants */
     if (curr->size == (sizeof(metadata_t) + numbytes)){
         if(curr->prev != NULL){ /* freelist contains more than one block */
@@ -40,9 +39,7 @@ void* split(metadata_t* curr, size_t numbytes){
         if(curr->next != NULL){
             curr->next->prev = curr->prev;
         }
-
     }
-
     /* free block is bigger than what is needed, split */
     else {
         void* rem_add = (void*)curr + sizeof(metadata_t) + numbytes;
@@ -92,11 +89,16 @@ void* dmalloc(size_t numbytes) {
 
 void coalesce() {
     metadata_t *curr = freelist;
-    while(curr->next != NULL){
-        if ((curr + curr->size) == curr->next){
+    while(curr->next != NULL){ /* iterate through freelist */
+
+        void* next_address = (void *)curr + curr->size;
+        metadata_t* nxt = (metadata_t*)next_address;
+        if (curr->next == nxt){ /* find that two blocks are adjacent (via comparing addresses) */
             curr->size += curr->next->size;
             curr->next = curr->next->next;
-            curr->next->prev = curr;
+            if(curr->next != NULL){
+                curr->next->prev = curr;
+            }
         }
         else {
             curr = curr->next;
@@ -109,14 +111,13 @@ void dfree(void* ptr) {
     /* sort freelist with respect to addresses so that you can coalesce in one pass of list */
     /* coalesce adjacent free blocks into one */
     /* coalesce - add the space of second block and its metadata to space in first block */
-    
     metadata_t *curr = freelist;
     void* header_address = ptr - sizeof(metadata_t);
     metadata_t *header = (metadata_t*) header_address; 
-
-    /* iterate through freelist to place newly free block in sorted order */
+    /* iterate through freelist to place newly free block in ascending order with respect to address */
     while(true){
-        if (curr > header){ /* adding newly free block in ascending address order, when you find one with a larger address */
+        /* when you find a free block with a larger address, place newly free block before it */
+        if (curr > header){ 
             if(curr->prev != NULL){ /* case in which you are in the middle of the freelist */
                 curr->prev->next = header;
             }
@@ -129,6 +130,7 @@ void dfree(void* ptr) {
             curr->prev = header;
             break;
         }
+        /* reached the last free block in freelist, the newly freed block has the largest address */
         if(curr->next == NULL){
             curr->next = header;
             header->prev = curr;
@@ -137,9 +139,7 @@ void dfree(void* ptr) {
         }
         curr = curr->next;
     }
-    coalesce();
-    
-    
+    coalesce();    
 }
 
 bool dmalloc_init() {
