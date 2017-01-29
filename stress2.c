@@ -42,24 +42,25 @@ int main(int argc, char *argv[]) {
 	/* Set the PSEUDO_RANDOM_SEED for pseduo random seed initialization based on time, i.e.,
  	 * the random values changes after each execution 
  	 */
-	if(PSEUDO_RANDOM_SEED)
+    if(PSEUDO_RANDOM_SEED) 
 		SEED(time(NULL));
 
 	assert(MAX_HEAP_SIZE >= 1024*1024 && "MAX_HEAP_SIZE is too low; Recommended setting is at least 1MB for test_stress2");
-
+    
 	for(i=0; i < BUFLEN; i++) {
 		ptr[i] = NULL;
 	}
-
+	
 	begin = clock();
 
+	
 	for(i = 0; i < LOOPCNT; i++) {
-    printf("%d\n", i);
 		itr = (int)(RAND() * BUFLEN);
-
 		randvar = RAND();
 
+		printf("This is loop: %d\n", i);
 		if(randvar < ALLOC_CONST && ptr[itr] == NULL) {
+			printf("------->>>Malloc\n");
 			size = (int)(RAND() * MAX_ALLOC_SIZE);
 			if(size > 0) {
 				ptr[itr] = dmalloc(size);
@@ -72,13 +73,16 @@ int main(int argc, char *argv[]) {
 				fflush(stderr);
 				++fail;
 			}
+		//printf("before else if");
 		} else if(randvar >= ALLOC_CONST && ptr[itr] != NULL) {
+			printf("------->>>Free\n");
 			DEBUG("Freeing ptr[%d]\n", itr);
 			dfree(ptr[itr]);
 			ptr[itr] = NULL;
 		}
+		
 	}
-
+	printf("here");
 	/*
  	* now -- free them
  	* */
@@ -89,7 +93,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	end = clock();
-
+	
 	print_freelist();
 	DEBUG("\n");
 	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;

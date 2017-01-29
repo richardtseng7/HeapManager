@@ -27,17 +27,23 @@
 #define ALLOC_CONST	0.5
 
 int main(int argc, char *argv[]) {
-
 	int size;
 	int itr;
 	void *ptr[BUFLEN];
-	int i;
+	int i,j;
 	double randvar;
 	int fail = 0;
+        //size_t global[LOOPCNT][2];
+        long int global[LOOPCNT][2];
+
 	
 	clock_t begin, end;
 	double time_spent;
 
+	for(j = 0; j < LOOPCNT; j++) {
+		global[j][0] = -1;
+		global[j][1] = -1;
+	}
 
 	/* Set the PSEUDO_RANDOM_SEED for pseduo random seed initialization based on time, i.e.,
  	 * the random values changes after each execution 
@@ -54,7 +60,6 @@ int main(int argc, char *argv[]) {
 	begin = clock();
 
 	for(i = 0; i < LOOPCNT; i++) {
-    printf("%d\n", i);
 		itr = (int)(RAND() * BUFLEN);
 
 		randvar = RAND();
@@ -64,16 +69,38 @@ int main(int argc, char *argv[]) {
 			if(size > 0) {
 				ptr[itr] = dmalloc(size);
                 //memset(ptr[itr], 0, size);
-			}
-			else
-				continue;
-			if(ptr[itr] == NULL) {
-				DEBUG("malloc at iteration %d failed for size %d\n", i,size);
-				fflush(stderr);
-				++fail;
-			}
+                }
+		else
+			continue;
+		if(ptr[itr] == NULL) {
+			DEBUG("malloc at iteration %d failed for size %d\n", i,size);
+			fflush(stderr);
+			++fail;
+                	continue;
+		}
+              /* Range check */
+               for(j = 0; j < i; j++) {
+                   if(global[j][0] == -1) {
+                     continue;
+                }
+                if((ptr[itr] >= global[j][0]) && (ptr[itr]+size <= global[j][1])) {
+                     printf("[s] = %ld, [e] = %ld, [p] = %ld, [itr] = %d, [size] = %ld\n", global[j][0], global[j][1], ptr[itr], i, size);
+                     printf("Correctness check failed\n");
+                     exit(EXIT_FAILURE);
+                 }
+            }
+            global[i][0] = ptr[itr];
+            global[i][1] = ptr[itr] + size;
+            printf("Assigned: [s] = %ld, [e] = %ld, [p] = %ld, [itr] = %d, [size] = %ld\n", global[i][0], global[i][1], ptr[itr],i, size);
+
 		} else if(randvar >= ALLOC_CONST && ptr[itr] != NULL) {
 			DEBUG("Freeing ptr[%d]\n", itr);
+            for(j = 0; j < i; j++) {
+                 if(global[j][0] == ptr[itr]) {
+                    global[j][0] = -1;
+                    global[j][1] = -1;
+                 }
+            }
 			dfree(ptr[itr]);
 			ptr[itr] = NULL;
 		}
@@ -97,6 +124,6 @@ int main(int argc, char *argv[]) {
 	printf("Test case summary\n");
 	printf("Loop count: %d, malloc successful: %d, malloc failed: %d, execution time: %g seconds\n\n", LOOPCNT, LOOPCNT-fail, fail, time_spent);
 
-	printf("Stress testcases2 passed!\n");
+	printf("Stress testcases3 passed!\n");
 	return 0;
 }

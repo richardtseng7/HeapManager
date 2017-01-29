@@ -30,21 +30,33 @@ void* split(metadata_t* curr, size_t numbytes){
     /*metadata_t* ret = sizeof(metadata_t) + curr;*/
     /* if free block is exactly the same size the user wants */
     if (curr->size == (sizeof(metadata_t) + numbytes)){
-        if(curr->prev != NULL){ /* freelist contains more than one block */
+        if(curr->prev != NULL){ /* not at first block */
             curr->prev->next = curr->next;
         }
-        else if(curr->prev == NULL){
+        else if(curr->prev == NULL){ /* at first block */
             freelist = curr->next;
         }
         if(curr->next != NULL){
             curr->next->prev = curr->prev;
         }
     }
-    /* free block is bigger than what is needed, split */
+    /* free block is bigger than what is needed, split it */
     else {
         void* rem_add = (void*)curr + sizeof(metadata_t) + numbytes;
         metadata_t *rem = (metadata_t*)rem_add;
-        rem->size = curr->size - sizeof(metadata_t) - numbytes; /* subtract header and rest of uneeded free block */
+        rem->size = curr->size - sizeof(metadata_t) - numbytes; /* calculate the remainder of free block */
+        if(rem->size < sizeof(metadata_t) + ALIGN(1)){ /* remaining part is not enough to account for a free block b/c of the needed header space, don't add it to freelist */
+            if(curr->prev != NULL){ /* not the first block in freelist */
+                curr->prev->next = curr->next;  /* take out block to malloc by rearranging pointers */
+            }
+            else if(curr->prev == NULL){ /* first block in freelist is what want to take out */
+                freelist = curr->next;
+            }
+            if(curr->next != NULL){
+                curr->next->prev = curr->prev;
+            }
+            return ret;
+        }
         rem->prev = curr->prev;
         rem->next = curr->next;
         if(curr->prev != NULL){
@@ -108,9 +120,9 @@ void coalesce() {
 
 void dfree(void* ptr) {
     /* your code here */
-    /* sort freelist with respect to addresses so that you can coalesce in one pass of list */
+    /* sort with respect to addresses as you insert into freelist, so that you can coalesce in one pass of list each time you call dfree */
     /* coalesce adjacent free blocks into one */
-    /* coalesce - add the space of second block and its metadata to space in first block */
+    /* to coalesce add the space of second block and its metadata to space in first block */
     metadata_t *curr = freelist;
     void* header_address = ptr - sizeof(metadata_t);
     metadata_t *header = (metadata_t*) header_address; 
@@ -118,7 +130,7 @@ void dfree(void* ptr) {
     while(true){
         /* when you find a free block with a larger address, place newly free block before it */
         if (curr > header){ 
-            if(curr->prev != NULL){ /* case in which you are in the middle of the freelist */
+            if(curr->prev != NULL){ /* case in which you are at the beginning of freelist */
                 curr->prev->next = header;
             }
             else if(curr->prev == NULL){ /* case in which newly added free block has the smallest address (is first) in freelist */
