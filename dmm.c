@@ -28,7 +28,8 @@ static metadata_t* freelist = NULL;
 void* split(metadata_t* curr, size_t numbytes){
     void* ret = (void*)curr + sizeof(metadata_t);
     /*metadata_t* ret = sizeof(metadata_t) + curr;*/
-    /* if free block is exactly the same size the user wants */
+
+    /* CASE 1: if free block is EXACTLY the same size the user needs */
     if (curr->size == (sizeof(metadata_t) + numbytes)){
         if(curr->prev != NULL){ /* not at first block */
             curr->prev->next = curr->next;
@@ -40,12 +41,13 @@ void* split(metadata_t* curr, size_t numbytes){
             curr->next->prev = curr->prev;
         }
     }
-    /* free block is bigger than what is needed, split it */
+    /* CASE 2: free block is bigger than what is needed, split it */
     else {
         void* rem_add = (void*)curr + sizeof(metadata_t) + numbytes;
         metadata_t *rem = (metadata_t*)rem_add;
         rem->size = curr->size - sizeof(metadata_t) - numbytes; /* calculate the remainder of free block */
-        if(rem->size < sizeof(metadata_t) + ALIGN(1)){ /* remaining part is not enough to account for a free block b/c of the needed header space, don't add it to freelist */
+        /* EDGE CASE: remaining part is not enough to account for a free block b/c of the needed header space, don't add it to freelist */
+        if(rem->size < sizeof(metadata_t) + ALIGN(1)){ 
             if(curr->prev != NULL){ /* not the first block in freelist */
                 curr->prev->next = curr->next;  /* take out block to malloc by rearranging pointers */
             }
@@ -55,6 +57,7 @@ void* split(metadata_t* curr, size_t numbytes){
             if(curr->next != NULL){
                 curr->next->prev = curr->prev;
             }
+            printf("freelist is empty");
             return ret;
         }
         rem->prev = curr->prev;
@@ -86,7 +89,7 @@ void* dmalloc(size_t numbytes) {
     metadata_t* curr = freelist;
     void* ret = NULL;
     while(true){
-        if (curr->size >= numbytes) { /* compare requested size to available free block */
+        if (curr->size >= (sizeof(metadata_t) + numbytes)) { /* compare requested size+header to available free block */
             ret = split(curr, numbytes);
             break;
         }
@@ -96,6 +99,7 @@ void* dmalloc(size_t numbytes) {
         }
         curr = curr->next; /* iterate to next free block */
     }
+    //print_freelist();
     return ret;
 }
 
@@ -127,6 +131,12 @@ void dfree(void* ptr) {
     void* header_address = ptr - sizeof(metadata_t);
     metadata_t *header = (metadata_t*) header_address; 
     /* iterate through freelist to place newly free block in ascending order with respect to address */
+    if(curr == NULL){
+        freelist = header;
+        header->prev = NULL;
+        header->next = NULL;
+        return;
+    }
     while(true){
         /* when you find a free block with a larger address, place newly free block before it */
         if (curr > header){ 
@@ -151,7 +161,8 @@ void dfree(void* ptr) {
         }
         curr = curr->next;
     }
-    coalesce();    
+    coalesce(); 
+    /*print_freelist();*/  
 }
 
 bool dmalloc_init() {
@@ -180,14 +191,15 @@ bool dmalloc_init() {
 
 /* for debugging; can be turned off through -NDEBUG flag*/
 void print_freelist() {
+    setvbuf(stdout, NULL, _IONBF, 0);
     metadata_t *freelist_head = freelist;
     while(freelist_head != NULL) {
-        DEBUG("\tFreelist Size:%zd, Head:%p, Prev:%p, Next:%p\t",
+        printf("\tFreelist Size:%zd, Head:%p, Prev:%p, Next:%p\t",
               freelist_head->size,
               freelist_head,
               freelist_head->prev,
               freelist_head->next);
         freelist_head = freelist_head->next;
     }
-    DEBUG("\n");
+    printf("\n");
 }

@@ -6,7 +6,7 @@
  */
 //#define MAX_HEAP_SIZE	(1024*1024*32) /* max size restricted to 32 MB */
 //#define MAX_HEAP_SIZE	(1024*1024*4) /* max size restricted to 4MB, recommended setting for test_stress2 */
-#define MAX_HEAP_SIZE	(1024) /* max size restricted to 1kB*/
+ #define MAX_HEAP_SIZE	(1024) /* max size restricted to 1kB*/
 
 /* On 32-bit machines, change this to 4 */
 #define WORD_SIZE	8

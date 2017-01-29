@@ -1,102 +1,70 @@
-#include <unistd.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
-#include <time.h>
-#include <string.h>
+#include <stdlib.h> //for exit
 
 #include "dmm.h"
 
-#ifdef HAVE_DRAND48
-	#define RAND() (drand48())
-	#define SEED(x) (srand48((x)))
-#else
-	#define RAND() ((double)random()/RAND_MAX)
-	#define SEED(x) (srandom((x)))
-#endif
-
-#define BUFLEN (1000)
-
-#define LOOPCNT (50000)
-
-#define MAX_ALLOC_SIZE (MAX_HEAP_SIZE/100)
-
-/* Set to 1 for non-deterministic seeding after each execution */
-#define PSEUDO_RANDOM_SEED	0
-
-#define ALLOC_CONST	0.5
-
+/* 
+ * To compile with your dmm.c:
+ * 
+ * $> make dmm.o
+ * $> gcc -I. -Wall -lm -DNDEBUG -o basicdmmtest basicdmmtest.c dmm.o
+ * $> ./basicdmmtest
+*/
 int main(int argc, char *argv[]) {
+  char *array1, *array2, *array3;
+  int i;
 
-	int size;
-	int itr;
-	void *ptr[BUFLEN];
-	int i;
-	double randvar;
-	int fail = 0;
-	
-	clock_t begin, end;
-	double time_spent;
+  printf("calling malloc(10)\n");
+  array1 = (char*)dmalloc(10);
+  if(array1 == NULL) {
+    fprintf(stderr,"call to dmalloc() failed\n");
+    fflush(stderr);
+    exit(1);
+  }
 
+  for(i=0; i < 9; i++) {
+    array1[i] = 'a';
+  }
+  array1[9] = '\0';
 
-	/* Set the PSEUDO_RANDOM_SEED for pseduo random seed initialization based on time, i.e.,
- 	 * the random values changes after each execution 
- 	 */
-	if(PSEUDO_RANDOM_SEED)
-		SEED(time(NULL));
+  printf("String: %s\n",array1);
 
-	assert(MAX_HEAP_SIZE >= 1024*1024 && "MAX_HEAP_SIZE is too low; Recommended setting is at least 1MB for test_stress2");
+  printf("calling malloc(900)\n");	
+  array2 = (char*)dmalloc(900);
+  if(array2 == NULL) {
+    fprintf(stderr,"call to dmalloc() failed\n");
+    fflush(stderr);
+    exit(1);
+  }
 
-	for(i=0; i < BUFLEN; i++) {
-		ptr[i] = NULL;
-	}
+  for(i=0; i < 99; i++) {
+    array2[i] = 'b';
+  }
+  array2[99] = '\0';
 
-	begin = clock();
+  printf("String : %s, %s\n",array1, array2);
 
-	for(i = 0; i < LOOPCNT; i++) {
-    printf("%d\n", i);
-		itr = (int)(RAND() * BUFLEN);
+  printf("calling free(900)\n");	
+  dfree(array2);
+  printf("calling malloc(905)\n");	
+  array3 = (char*)dmalloc(905);
 
-		randvar = RAND();
+  if(array3 == NULL) {
+    fprintf(stderr,"call to dmalloc() failed\n");
+    fflush(stderr);
+    exit(1);
+  }
+  for(i=0; i < 905; i++) {
+    array3[i] = 'c';
+  }
+  array3[905] = '\0';
 
-		if(randvar < ALLOC_CONST && ptr[itr] == NULL) {
-			size = (int)(RAND() * MAX_ALLOC_SIZE);
-			if(size > 0) {
-				ptr[itr] = dmalloc(size);
-                //memset(ptr[itr], 0, size);
-			}
-			else
-				continue;
-			if(ptr[itr] == NULL) {
-				DEBUG("malloc at iteration %d failed for size %d\n", i,size);
-				fflush(stderr);
-				++fail;
-			}
-		} else if(randvar >= ALLOC_CONST && ptr[itr] != NULL) {
-			DEBUG("Freeing ptr[%d]\n", itr);
-			dfree(ptr[itr]);
-			ptr[itr] = NULL;
-		}
-	}
+  printf("String: %s, %s, %s\n",array1, array2, array3);
 
-	/*
- 	* now -- free them
- 	* */
-	for(i=0; i < BUFLEN; i++) {
-		if(ptr[i] != NULL) {
-			dfree(ptr[i]);
-			ptr[i] = NULL;
-		}
-	}
-	end = clock();
+  printf("calling free(905)\n");	
+  dfree(array3);
 
-	print_freelist();
-	DEBUG("\n");
-	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	
-	printf("Test case summary\n");
-	printf("Loop count: %d, malloc successful: %d, malloc failed: %d, execution time: %g seconds\n\n", LOOPCNT, LOOPCNT-fail, fail, time_spent);
+  printf("Basic testcases passed!\n");
 
-	printf("Stress testcases2 passed!\n");
-	return 0;
+  return(0);
 }
