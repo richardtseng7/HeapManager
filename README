@@ -1,0 +1,6 @@
+Team Members: Wendy Lau, Pim Chuaylua, Richard Tseng
+netIDs: wcl7, pc131, rt120
+House spent on project: 12 hours
+Implementation: Used first-fit implementaion and splitting for dmalloc, and an explicit freelist sorted by address. We coalesced freelist each time after inserting newly freed block.
+Results: Passed all basic, coalesce, and stress tests
+Consulted: Efe Aras, textbook, lecture slides
